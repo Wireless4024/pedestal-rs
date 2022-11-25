@@ -3,9 +3,17 @@ use std::io;
 use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
 
-///
 /// Normalize malicious path input but keep it contains in base directory otherwise return `ErrorKind::InvalidInput`  
 /// ref: https://github.com/rust-lang/rfcs/issues/2208#issuecomment-342679694
+/// # Example
+/// ```rust
+/// use std::io;
+/// use std::path::PathBuf;
+/// use pedestal_rs::fs::path::normalize;
+/// let base = PathBuf::from(".").canonicalize().unwrap();
+/// assert_eq!(normalize(&base, "abcd").ok(), Some(base.join("abcd")));
+/// assert!(normalize(&base, "abcd/../..").is_err());
+/// ```
 pub fn normalize(base: &Path, p: impl AsRef<Path>) -> io::Result<PathBuf> {
 	let p = p.as_ref();
 	let mut stack: Vec<Component> = Vec::new();
@@ -43,6 +51,12 @@ pub fn normalize(base: &Path, p: impl AsRef<Path>) -> io::Result<PathBuf> {
 }
 
 /// Get relative path to access source from target
+/// # Example
+/// ```rust
+/// use std::path::PathBuf;
+/// use pedestal_rs::fs::path::relative_from;
+/// assert_eq!(relative_from("src/lib.rs", "src/fs"), PathBuf::from("../lib.rs"))
+/// ```
 pub fn relative_from(source: impl AsRef<Path>, target: impl AsRef<Path>) -> PathBuf {
 	let source: &Path = source.as_ref();
 	let mut target: &Path = target.as_ref();
@@ -71,6 +85,12 @@ pub fn relative_from(source: impl AsRef<Path>, target: impl AsRef<Path>) -> Path
 /// find available name for current path  
 /// if existed it will append `.<NUMBER>` to original filename  
 /// return None if impossible to generate filename
+/// # Example
+/// ```rust
+/// use std::path::PathBuf;
+/// use pedestal_rs::fs::path::find_available_name;
+/// assert_eq!(find_available_name("src/lib.rs"), Some(PathBuf::from("src/lib.rs.1")))
+/// ```
 pub fn find_available_name(path: impl AsRef<Path>) -> Option<PathBuf> {
 	let path = path.as_ref();
 	if !path.exists() {
@@ -121,11 +141,11 @@ mod tests {
 
 		want.push("../");
 		let result = normalize(&base, &want);
-		assert!(result.is_err())
+		assert!(result.is_err());
 	}
 
 	#[test]
-	fn test_absolute_from1() {
+	fn test_relative_from() {
 		assert_eq!(relative_from("src/lib.rs", "target/debug"), PathBuf::from("../../src/lib.rs"));
 		assert_eq!(relative_from("src/lib.rs", "src/fs"), PathBuf::from("../lib.rs"));
 		assert_eq!(relative_from("../src/lib.rs", "target/debug"), PathBuf::from("../../../src/lib.rs"));
