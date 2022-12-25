@@ -87,7 +87,7 @@ pub trait ArcExt<T: 'static> {
 	/// assert_ne!(_copied1, Arc::new(String::new()));
 	/// ```
 	#[cfg(feature = "async")]
-	fn modify_async_send<'a, F>(&'a mut self, f: F) -> ()
+	fn modify_async_send<'a, F>(&'a mut self, f: F)
 		where for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>>,
 		      F: 'a,;
 }
@@ -129,7 +129,7 @@ impl<T: Clone + 'static> ArcExt<T> for Arc<T> {
 		})
 	}
 
-	fn modify_async_send<'a, F>(&'a mut self, f: F) -> ()
+	fn modify_async_send<'a, F>(&'a mut self, f: F)
 		where
 				for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>>,
 				F: 'a {
