@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+futures = { version = "0.3", optional = true }
 tokio = { version = "1", default-features = false, optional = true }
 nix = { version = "0.26", optional = true }
 
@@ -17,5 +18,5 @@ tokio = { version = "1", features = ["rt-multi-thread", "io-util"] }
 fs = []
 collection = []
 mutation = []
-async = []
+async = ["futures"]
 tokio-proc = ["tokio/process", "tokio/fs", "tokio/rt-multi-thread", "nix"]

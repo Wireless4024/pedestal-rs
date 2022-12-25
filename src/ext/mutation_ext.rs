@@ -2,6 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use futures::executor::block_on;
+
 pub trait CloneExt<T> {
 	/// Clone current variable and accept closure to modify its value
 	/// # Example
@@ -66,6 +68,28 @@ pub trait ArcExt<T: 'static> {
 	fn modify_async<'a, F>(&'a mut self, f: F) -> Pin<Box<dyn Future<Output=Arc<T>> + 'a>>
 		where for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + 'b>>,
 		      F: 'a;
+
+	/// This implementation block on &mut reference to make it Send+Sync
+	/// # Example
+	/// ```rust
+	/// use std::sync::Arc;
+	/// use futures::executor::block_on;
+	/// use pedestal_rs::ext::ArcExt;
+	/// let mut base = Arc::new("Hello".to_string());
+	/// // has another strong reference
+	/// let _copied1 = Arc::clone(&base);
+	/// {
+	///     base.modify_async_send(|it| Box::pin(async {
+	///         it.clear();
+	///     }));
+	/// }
+	/// assert_eq!(base, Arc::new(String::new()));
+	/// assert_ne!(_copied1, Arc::new(String::new()));
+	/// ```
+	#[cfg(feature = "async")]
+	fn modify_async_send<'a, F>(&'a mut self, f: F) -> ()
+		where for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>>,
+		      F: 'a,;
 }
 
 impl<T: Clone> CloneExt<T> for T {
@@ -77,7 +101,7 @@ impl<T: Clone> CloneExt<T> for T {
 	}
 }
 
-impl<T: Send + Clone + 'static> ArcExt<T> for Arc<T> {
+impl<T: Clone + 'static> ArcExt<T> for Arc<T> {
 	#[inline]
 	fn as_owned_arc<F: FnOnce(&mut T)>(&self, f: F) -> Arc<T> {
 		let mut tmp = T::clone(self);
@@ -103,5 +127,14 @@ impl<T: Send + Clone + 'static> ArcExt<T> for Arc<T> {
 			*self = Arc::new(new);
 			old
 		})
+	}
+
+	fn modify_async_send<'a, F>(&'a mut self, f: F) -> ()
+		where
+				for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>>,
+				F: 'a {
+		let mut new = T::clone(self);
+		block_on(f(&mut new));
+		*self = Arc::new(new);
 	}
 }
