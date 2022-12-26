@@ -2,8 +2,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use futures::executor::block_on;
-
 pub trait CloneExt<T> {
 	/// Clone current variable and accept closure to modify its value
 	/// # Example
@@ -79,17 +77,23 @@ pub trait ArcExt<T: 'static> {
 	/// // has another strong reference
 	/// let _copied1 = Arc::clone(&base);
 	/// {
-	///     base.modify_async_send(|it| Box::pin(async {
+	///     let fut = base.modify_async_send(|it| Box::pin(async {
 	///         it.clear();
 	///     }));
+	///     fn send_sync<T:Send+Sync>(_:&T){}
+	///     send_sync(&fut);
+	///     // you should replace `executor::block_on` with `.await`
+	///     let res = block_on(fut);
+	///     assert_eq!(_copied1, res);
 	/// }
 	/// assert_eq!(base, Arc::new(String::new()));
 	/// assert_ne!(_copied1, Arc::new(String::new()));
 	/// ```
 	#[cfg(feature = "async")]
-	fn modify_async_send<'a, F>(&'a mut self, f: F)
-		where for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>>,
-		      F: 'a,;
+	fn modify_async_send<'a, F>(&'a mut self, f: F) -> Pin<Box<dyn Future<Output=Arc<T>> + Send + Sync + 'a>>
+		where for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>> + Send + Sync,
+		      F: 'a,
+		      T: Send + Sync;
 }
 
 impl<T: Clone> CloneExt<T> for T {
@@ -129,12 +133,16 @@ impl<T: Clone + 'static> ArcExt<T> for Arc<T> {
 		})
 	}
 
-	fn modify_async_send<'a, F>(&'a mut self, f: F)
-		where
-				for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>>,
-				F: 'a {
-		let mut new = T::clone(self);
-		block_on(f(&mut new));
-		*self = Arc::new(new);
+	fn modify_async_send<'a, F>(&'a mut self, f: F) -> Pin<Box<dyn Future<Output=Arc<T>> + Send + Sync + 'a>>
+		where for<'b> F: FnOnce(&'b mut T) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'b>> + Send + Sync,
+		      F: 'a,
+		      T: Send + Sync {
+		Box::pin(async {
+			let old = Arc::clone(self);
+			let mut new = T::clone(self);
+			f(&mut new).await;
+			*self = Arc::new(new);
+			old
+		})
 	}
 }
