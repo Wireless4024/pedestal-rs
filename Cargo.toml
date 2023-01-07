@@ -15,8 +15,10 @@ futures = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "io-util"] }
 
 [features]
+default= []
 fs = []
 collection = []
 mutation = []
 async = ["futures"]
 tokio-proc = ["tokio/process", "tokio/fs", "tokio/rt-multi-thread", "nix"]
+mini-bmp = []

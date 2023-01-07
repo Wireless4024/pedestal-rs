@@ -14,3 +14,7 @@ pub mod ext;
 /// Tokio process helper
 #[cfg(feature = "tokio-proc")]
 pub mod tokio_proc;
+
+/// Mini bitmap builder
+#[cfg(feature = "mini-bmp")]
+pub mod mini_bmp;
