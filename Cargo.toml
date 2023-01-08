@@ -24,3 +24,5 @@ async = ["futures"]
 tokio-proc = ["tokio/process", "tokio/fs", "tokio/rt-multi-thread", "nix"]
 mini-bmp = []
 cv-mat = ["opencv"]
+
+test = ["fs", "collection", "mutation", "async", "mini-bmp"]

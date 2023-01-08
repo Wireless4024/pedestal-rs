@@ -7,6 +7,7 @@ use opencv::core::{Mat, MatTraitConst};
 use opencv::prelude::MatTrait;
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct MatHeader {
 	/// version (unused)
 	pub ver: u8,
