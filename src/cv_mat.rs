@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::mem;
 use std::mem::{ManuallyDrop, size_of};
 
-use opencv::core::{Mat, MatTraitConst};
+use opencv::core::{CV_8UC4, Mat, MatTraitConst};
 use opencv::prelude::MatTrait;
 
 #[derive(Debug)]
@@ -72,6 +72,34 @@ impl From<&Mat> for CvMat {
 					unsafe { row_ptr.copy_from(row.data(), width) };
 				};
 			}
+		}
+		Self {
+			header,
+			data,
+		}
+	}
+}
+
+#[cfg(feature = "mini-bmp")]
+impl From<&crate::mini_bmp::BitMap> for CvMat {
+	fn from(value: &crate::mini_bmp::BitMap) -> Self {
+		let header = MatHeader {
+			ver: MAT_VER,
+			_reserved1: 0,
+			_reserved2: 0,
+			_reserved3: 0,
+			width: value.width() as _,
+			height: value.height() as _,
+			mat_format: CV_8UC4,
+			_reserved4: 0,
+			_reserved5: 0,
+		};
+		let mut data = header.alloc_vec();
+		unsafe {
+			data.clear();
+		}
+		for x in value.pixel_bytes().chunks((value.width() as usize)<<2).rev() {
+			data.extend_from_slice(x);
 		}
 		Self {
 			header,

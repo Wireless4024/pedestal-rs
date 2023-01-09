@@ -12,7 +12,7 @@ pub struct BGRA {
 
 /// This struct used to store bitmap data in memory
 /// # Limitation
-/// + RGBA 32bpp format only
+/// + BGRA 32bpp format only
 /// + Can't read from anything that is not RGBA 32bpp
 pub struct BitMap {
 	data: Vec<u8>,
@@ -177,16 +177,7 @@ impl BitMap {
 
 	pub fn pixel_bytes(&self) -> &[u8] {
 		let raw = &self.data;
-		unsafe { slice::from_raw_parts(raw.as_ptr().add(BM_PIXEL_START).cast::<u8>(), (raw.len() - 54) * 4) }
-	}
-
-	/// Build pixel bytes for matrix image use
-	pub fn build_mat(&self) -> Vec<u8> {
-		let mut data = Vec::with_capacity(self.data.len() << 2);
-		for x in self.pixel_bytes().windows((self.width() as usize) * 4).rev() {
-			data.extend_from_slice(x);
-		}
-		data
+		unsafe { slice::from_raw_parts(raw.as_ptr().add(BM_PIXEL_START).cast::<u8>(), raw.len() - 54) }
 	}
 }
 
